@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type Habit = {
   id: string;
   name: string;
-  icon?: string;
+  imageUri?: string;
   createdAt: string;
   completedDates: string[]; // daty w formacie YYYY-MM-DD
 };
@@ -16,6 +16,7 @@ type HabitContextType = {
   toggleHabitCompletion: (habitId: string) => Promise<void>;
   deleteHabit: (habitId: string) => Promise<void>;
   isHabitCompletedToday: (habitId: string) => boolean;
+  updateHabitImage: (habitId: string, imageUri: string) => Promise<void>;
 };
 
 const HabitContext = createContext<HabitContextType | undefined>(undefined);
@@ -92,6 +93,13 @@ export function HabitProvider({ children }: { children: ReactNode }) {
     return habit ? habit.completedDates.includes(today) : false;
   };
 
+  const updateHabitImage = async (habitId: string, imageUri: string) => {
+    const updatedHabits = habits.map(habit => 
+        habit.id === habitId ? { ...habit, imageUri } : habit
+    );
+    await saveHabits(updatedHabits);
+  }
+
   return (
     <HabitContext.Provider value={{
       habits,
@@ -100,6 +108,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
       toggleHabitCompletion,
       deleteHabit,
       isHabitCompletedToday,
+      updateHabitImage,
     }}>
       {children}
     </HabitContext.Provider>
