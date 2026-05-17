@@ -1,10 +1,10 @@
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function TodayScreen() {
+export default function HabitsScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>SimpleHabit</Text>
-      <Text style={styles.subtitle}>Dzisiaj</Text>
+      <Text style={styles.title}>Moje nawyki</Text>
+      <Text style={styles.subtitle}>Tutaj będzie lista nawyków...</Text>
     </View>
   );
 }
@@ -17,13 +17,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   title: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: '#1e2937',
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#64748b',
-    marginTop: 8,
+    marginTop: 12,
   },
 });
