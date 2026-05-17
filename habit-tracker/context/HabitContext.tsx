@@ -17,6 +17,7 @@ type HabitContextType = {
   deleteHabit: (habitId: string) => Promise<void>;
   isHabitCompletedToday: (habitId: string) => boolean;
   updateHabitImage: (habitId: string, imageUri: string) => Promise<void>;
+  updateHabit: (habitId: string, newName: string) => Promise<void>;
 };
 
 const HabitContext = createContext<HabitContextType | undefined>(undefined);
@@ -98,7 +99,14 @@ export function HabitProvider({ children }: { children: ReactNode }) {
         habit.id === habitId ? { ...habit, imageUri } : habit
     );
     await saveHabits(updatedHabits);
-  }
+  };
+
+  const updateHabit = async (habitId: string, newName: string) => {
+    const updatedHabits = habits.map(habit => 
+        habit.id === habitId ? { ...habit, name: newName.trim() } : habit
+    );
+    await saveHabits(updatedHabits);
+  };
 
   return (
     <HabitContext.Provider value={{
@@ -109,6 +117,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
       deleteHabit,
       isHabitCompletedToday,
       updateHabitImage,
+      updateHabit,
     }}>
       {children}
     </HabitContext.Provider>

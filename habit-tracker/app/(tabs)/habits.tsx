@@ -1,11 +1,14 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useHabits } from '../../context/HabitContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function HabitsScreen() {
-  const { habits, loading, deleteHabit } = useHabits();
+  const { habits, loading, deleteHabit, updateHabit } = useHabits();
   const router = useRouter();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   const handleDelete = (habitId: string, habitName: string) => {
     Alert.alert(
@@ -21,6 +24,31 @@ export default function HabitsScreen() {
         ]
     )
   }
+
+  const startEditing = (habit: any) => {
+    setEditingId(habit.id);
+    setEditName(habit.name);
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+
+    const trimmedName = editName.trim();
+
+    if (trimmedName.length < 2) {
+        Alert.alert('Błąd', 'Nazwa nawyku musi mieć co najmniej 2 znaki');
+        return; 
+    }
+
+    await updateHabit(editingId, trimmedName);
+    setEditingId(null);
+    setEditName('');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName('');
+  };
 
   return (
     <View style={styles.container}>
@@ -46,14 +74,44 @@ export default function HabitsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.habitItem}>
-              <Text style={styles.habitName}>{item.name}</Text>
-
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDelete(item.id, item.name)}
-              >
-                  <Ionicons name="trash-outline" size={22} color="#ef4444" />
-              </TouchableOpacity>
+              {editingId === item.id ? (
+                // Tryb edycji
+                <View style={styles.editContainer}>
+                  <TextInput
+                    style={styles.editInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    autoFocus
+                  />
+                  <TouchableOpacity onPress={saveEdit}>
+                    <Ionicons name="checkmark" size={24} color="#22c55e" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={cancelEdit} style={{ marginLeft: 12 }}>
+                    <Ionicons name="close" size={24} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                // Normalny widok
+                <>
+                  <Text style={styles.habitName}>{item.name}</Text>
+                  
+                  <View style={styles.actions}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => startEditing(item)}
+                    >
+                      <Ionicons name="pencil" size={22} color="#64748b" />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => handleDelete(item.id, item.name)}
+                    >
+                      <Ionicons name="trash-outline" size={22} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
             </View>
           )}
         />
@@ -131,5 +189,23 @@ const styles = StyleSheet.create({
     marginTop: 50,
     fontSize: 16,
     color: '#64748b',
+  },
+  actions: { 
+    flexDirection: 'row' 
+  },
+  actionButton: { 
+    padding: 8, marginLeft: 4 
+  },
+  editContainer: { 
+    flexDirection: 'row', alignItems: 'center', flex: 1 
+  },
+  editInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+    borderRadius: 8,
+    padding: 8,
+    marginRight: 8,
+    fontSize: 17,
   },
 });
