@@ -7,7 +7,7 @@ type Habit = {
   name: string;
   imageUri?: string;
   createdAt: string;
-  completedDates: string[]; // daty w formacie YYYY-MM-DD
+  completedDates: string[]; // YYYY-MM-DD
 };
 
 type HabitContextType = {
@@ -28,16 +28,25 @@ export function HabitProvider({ children }: { children: ReactNode }) {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Ładowanie nawyków z AsyncStorage
+  // Ładowanie + czyszczenie starych dat/tasków
   useEffect(() => {
-    loadHabits();
+    loadAndCleanHabits();
   }, []);
 
-  const loadHabits = async () => {
+  const loadAndCleanHabits = async () => {
     try {
       const storedHabits = await AsyncStorage.getItem('habits');
       if (storedHabits) {
-        setHabits(JSON.parse(storedHabits));
+        let parsed = JSON.parse(storedHabits);
+        
+        // Usuwanie starych dat 
+        const today = new Date().toISOString().split('T')[0];
+        parsed = parsed.map((habit: Habit) => ({
+          ...habit,
+          completedDates: habit.completedDates.filter(date => date === today)
+        }));
+
+        setHabits(parsed);
       }
     } catch (error) {
       console.error('Error loading habits:', error);
@@ -63,8 +72,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
       completedDates: [],
     };
-    const updatedHabits = [...habits, newHabit];
-    await saveHabits(updatedHabits);
+    await saveHabits([...habits, newHabit]);
   };
 
   const toggleHabitCompletion = async (habitId: string) => {
@@ -87,6 +95,13 @@ export function HabitProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteHabit = async (habitId: string) => {
+    // Usuwanie zdjęć 
+    const habit = habits.find(h => h.id === habitId);
+    if (habit?.imageUri) {
+      FileSystem.deleteAsync(habit.imageUri, { idempotent: true })
+        .catch(e => console.warn('Nie udało się usunąć starego zdjęcia:', e));
+    }
+
     const updatedHabits = habits.filter(h => h.id !== habitId);
     await saveHabits(updatedHabits);
   };
@@ -140,15 +155,12 @@ export function HabitProvider({ children }: { children: ReactNode }) {
 
   const persistImage = async (tempUri: string, habitId: string): Promise<string> => {
     const dir = `${FileSystem.documentDirectory}habit-images/`;
-    
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
     
     const fileName = `${habitId}_${Date.now()}.jpg`;
     const permanentUri = `${dir}${fileName}`;
     
     await FileSystem.copyAsync({ from: tempUri, to: permanentUri });
-    console.log('[DEBUG] Image persisted to:', permanentUri);
-    
     return permanentUri;
   };
 
