@@ -1,23 +1,82 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
 import { useHabits } from '../../context/HabitContext';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
 
 export default function TodayScreen() {
-  const { habits, toggleHabitCompletion, isHabitCompletedToday, updateHabitImage } = useHabits();
+  useEffect(() => {
+    (async () => {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Brak uprawnień', 'Aby dodawać zdjęcia potrzebujemy dostępu do galerii');
+      }
+    })();
+  }, []);
 
-  const today = new Date().toISOString().split('T')[0];
+  const { habits, toggleHabitCompletion, isHabitCompletedToday, completeHabitWithImage } = useHabits();
 
   // Podział na dwie listy
   const todoHabits = habits.filter(h => !isHabitCompletedToday(h.id));
   const doneHabits = habits.filter(h => isHabitCompletedToday(h.id));
 
   const handleMarkAsDone = async (habitId: string, habitName: string) => {
-    // TODO: Możliwość dodawanie zdjęć do zakończonych tasków
-    await toggleHabitCompletion(habitId);
+    
+    // Jeśli nawyk już jest zrobiony dzisiaj po prostu odznacz
+    if (isHabitCompletedToday(habitId)) {
+      await toggleHabitCompletion(habitId);
+      return;
+    }
+
+    // Jeśli nie jest zrobiony zapytaj o zdjęcie
+    Alert.alert(
+      "Zrobione dzisiaj?",
+      `Czy chcesz dodać zdjęcie do "${habitName}"?`,
+      [
+        { 
+          text: "Tylko zaznacz", 
+          onPress: () => toggleHabitCompletion(habitId) 
+        },
+        { 
+          text: "Zrób zdjęcie", 
+          onPress: () => takePhoto(habitId) 
+        },
+        { 
+          text: "Wybierz z galerii", 
+          onPress: () => pickFromGallery(habitId) 
+        },
+      ]
+    );
+  };
+
+  const takePhoto = async (habitId: string) => {
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      await completeHabitWithImage(habitId, result.assets[0].uri);
+    }
+  };
+
+  const pickFromGallery = async (habitId: string) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      await completeHabitWithImage(habitId, result.assets[0].uri);
+    }
   };
 
   const renderHabit = (habit: any, isDone: boolean) => (
     <TouchableOpacity 
+      key={habit.id + (habit.imageUri || '')}   
       style={styles.habitItem}
       onPress={() => handleMarkAsDone(habit.id, habit.name)}
     >
@@ -29,12 +88,20 @@ export default function TodayScreen() {
         />
       </View>
       
-      <Text style={[styles.habitName, isDone && styles.doneText]}>
-        {habit.name}
-      </Text>
+      <View style={styles.habitInfo}>
+        <Text style={[styles.habitName, isDone && styles.doneText]}>
+          {habit.name}
+        </Text>
+      </View>
 
       {isDone && habit.imageUri && (
-        <Ionicons name="image" size={20} color="#64748b" />
+        <Image 
+          source={{ uri: habit.imageUri }}
+          style={styles.thumbnail}
+          contentFit="cover"
+          transition={200}
+          onError={(e) => console.log('❌ expo-image error:', habit.name, e)}
+        />
       )}
     </TouchableOpacity>
   );
@@ -114,7 +181,7 @@ const styles = StyleSheet.create({
   },
   doneText: {
     textDecorationLine: 'line-through',
-    color: '#64748b',
+    color: '#64748b', 
   },
   list: {
     paddingBottom: 20,
@@ -125,5 +192,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginTop: 30,
     fontWeight: '500',
+  },
+  habitInfo: {
+     flex: 1 
+  },
+  thumbnail: { 
+    width: 50, height: 50, borderRadius: 8 
   },
 });
