@@ -34,7 +34,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Zezwól aplikacji na dostęp do galerii aby dodawać zdjęcia wykonanych nawyków."
+          "photosPermission": "Zezwól aplikacji na dostęp do galerii aby dodawać zdjęcia wykonanych nawyków.",
+          "cameraPermission": "Zezwól aplikacji na dostęp do kamery aby robić zdjęcia wykonanych nawyków."
         }
       ]
     ],

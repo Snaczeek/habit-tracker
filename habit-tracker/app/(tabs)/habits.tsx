@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useHabits } from '../../context/HabitContext';
 import { Ionicons } from '@expo/vector-icons';
+import type { Habit } from '../../context/HabitContext';
 
 export default function HabitsScreen() {
   const { habits, loading, deleteHabit, updateHabit } = useHabits();
@@ -13,19 +14,25 @@ export default function HabitsScreen() {
   const handleDelete = (habitId: string, habitName: string) => {
     Alert.alert(
         'Usunąć nawyk?',
-        `Czy na pewno checesz usunąć "${habitName}"?`,
+        `Czy na pewno chcesz usunąć "${habitName}"?`,
         [
             { text: 'Anuluj', style: 'cancel' },
             {
                 text: 'Usuń',
                 style: 'destructive',
-                onPress: () => deleteHabit(habitId)
+                onPress: async () => {
+                  try {
+                    await deleteHabit(habitId);
+                  } catch (error) {
+                    Alert.alert('Błąd', 'Nie udało się usunąć nawyku');
+                  }
+                }
             }
         ]
     )
   }
 
-  const startEditing = (habit: any) => {
+  const startEditing = (habit: Habit) => {
     setEditingId(habit.id);
     setEditName(habit.name);
   };
@@ -86,7 +93,7 @@ export default function HabitsScreen() {
                   <TouchableOpacity onPress={saveEdit}>
                     <Ionicons name="checkmark" size={24} color="#22c55e" />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={cancelEdit} style={{ marginLeft: 12 }}>
+                  <TouchableOpacity onPress={cancelEdit} style={styles.cancelButton}>
                     <Ionicons name="close" size={24} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
@@ -148,6 +155,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  cancelButton: {
+    marginLeft: 12,
+  },
   habitItem: {
     backgroundColor: 'white',
     marginHorizontal: 12,
@@ -164,9 +174,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     flex: 1,
   },
-  deleteButton: {
-    padding: 8,
-  },
   empty: {
     flex: 1,
     justifyContent: 'center',
@@ -178,17 +185,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748b',
     textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 16,
-    color: '#94a3b8',
-    marginTop: 8,
-  },
-  centerText: {
-    textAlign: 'center',
-    marginTop: 50,
-    fontSize: 16,
-    color: '#64748b',
   },
   actions: { 
     flexDirection: 'row' 

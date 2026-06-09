@@ -38,6 +38,7 @@ export default function AddHabitScreen() {
         onChangeText={setName}
         placeholder="Spacer..."
         autoFocus
+        maxLength={100}
       />
 
       <TouchableOpacity 

@@ -1,25 +1,89 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { useEffect } from 'react';
 import { useHabits } from '../../context/HabitContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
+import type { Habit } from '../../context/HabitContext';
+import React from 'react';
+
+const HabitItem = React.memo(({ 
+  habit, 
+  isDone, 
+  onPress 
+}: { 
+  habit: Habit; 
+  isDone: boolean; 
+  onPress: () => void;
+}) => (
+  <TouchableOpacity 
+    style={styles.habitItem}
+    onPress={onPress}
+  >
+    <View style={styles.checkboxContainer}>
+      <Ionicons 
+        name={isDone ? "checkmark-circle" : "ellipse-outline"} 
+        size={32} 
+        color={isDone ? "#22c55e" : "#94a3b8"} 
+      />
+    </View>
+    
+    <View style={styles.habitInfo}>
+      <Text style={[styles.habitName, isDone && styles.doneText]}>
+        {habit.name}
+      </Text>
+    </View>
+
+    {isDone && habit.imageUri && (
+      <Image 
+        source={{ uri: habit.imageUri }}
+        style={styles.thumbnail}
+        contentFit="cover"
+        transition={200}
+      />
+    )}
+  </TouchableOpacity>
+));
+
+// Komponent nagłówka sekcji
+const SectionHeader = React.memo(({ title }: { title: string }) => (
+  <Text style={styles.sectionTitle}>{title}</Text>
+));
 
 export default function TodayScreen() {
+  const { habits, toggleHabitCompletion, isHabitCompletedToday, completeHabitWithImage, loading } = useHabits();
+  
   useEffect(() => {
     (async () => {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const { status: galleryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status: camStatus } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (galleryStatus !== 'granted') {
         Alert.alert('Brak uprawnień', 'Aby dodawać zdjęcia potrzebujemy dostępu do galerii');
       }
+      if (camStatus !== 'granted' ) {
+        Alert.alert('Brak uprawnień', 'Potrzebujemy dostępu do kamery, aby robić zdjęcia');       
+      }
+
     })();
   }, []);
-
-  const { habits, toggleHabitCompletion, isHabitCompletedToday, completeHabitWithImage } = useHabits();
 
   // Podział na dwie listy
   const todoHabits = habits.filter(h => !isHabitCompletedToday(h.id));
   const doneHabits = habits.filter(h => isHabitCompletedToday(h.id));
+
+  const sections = [
+    ...(todoHabits.length > 0 ? [{
+      title: `Do zrobienia (${todoHabits.length})`,
+      data: todoHabits,
+      isDone: false,
+    }] : []),
+    ...(doneHabits.length > 0 ? [{
+      title: `Zrobione dzisiaj (${doneHabits.length})`,
+      data: doneHabits,
+      isDone: true,
+    }] : []),
+  ];
 
   const handleMarkAsDone = async (habitId: string, habitName: string) => {
     
@@ -74,37 +138,29 @@ export default function TodayScreen() {
     }
   };
 
-  const renderHabit = (habit: any, isDone: boolean) => (
-    <TouchableOpacity 
-      key={habit.id + (habit.imageUri || '')}   
-      style={styles.habitItem}
-      onPress={() => handleMarkAsDone(habit.id, habit.name)}
-    >
-      <View style={styles.checkboxContainer}>
-        <Ionicons 
-          name={isDone ? "checkmark-circle" : "ellipse-outline"} 
-          size={32} 
-          color={isDone ? "#22c55e" : "#94a3b8"} 
-        />
-      </View>
-      
-      <View style={styles.habitInfo}>
-        <Text style={[styles.habitName, isDone && styles.doneText]}>
-          {habit.name}
-        </Text>
-      </View>
-
-      {isDone && habit.imageUri && (
-        <Image 
-          source={{ uri: habit.imageUri }}
-          style={styles.thumbnail}
-          contentFit="cover"
-          transition={200}
-          onError={(e) => console.log('❌ expo-image error:', habit.name, e)}
-        />
-      )}
-    </TouchableOpacity>
+  // Renderowanie elementu
+  const renderItem = ({ item, section }: { item: Habit; section: any }) => (
+    <HabitItem 
+      habit={item} 
+      isDone={section.isDone} 
+      onPress={() => handleMarkAsDone(item.id, item.name)}
+    />
   );
+
+  // Renderowanie nagłówka sekcji
+  const renderSectionHeader = ({ section }: { section: any }) => (
+    <SectionHeader title={section.title} />
+  );
+
+  // Stan ładowania
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text style={styles.loadingText}>Ładowanie nawyków...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -112,30 +168,21 @@ export default function TodayScreen() {
         Dzisiaj • {new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
       </Text>
 
-      {/* Lista do zrobienia */}
-      <Text style={styles.sectionTitle}>Do zrobienia ({todoHabits.length})</Text>
-      {todoHabits.length > 0 ? (
-        <FlatList
-          data={todoHabits}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => renderHabit(item, false)}
-          contentContainerStyle={styles.list}
-        />
+      {sections.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Nie masz jeszcze żadnych nawyków</Text>
+          <Text style={styles.emptySubtext}>Dodaj pierwszy nawyk w zakładce "Nawyki"</Text>
+        </View>
       ) : (
-        <Text style={styles.emptySection}>Wszystko zrobione na dzisiaj! 🎉</Text>
-      )}
-
-      {/* Lista zrobione */}
-      {doneHabits.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Zrobione dzisiaj ({doneHabits.length})</Text>
-          <FlatList
-            data={doneHabits}
-            keyExtractor={item => item.id}
-            renderItem={({ item }) => renderHabit(item, true)}
-            contentContainerStyle={styles.list}
-          />
-        </>
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          renderSectionHeader={renderSectionHeader}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          stickySectionHeadersEnabled={false}
+        />
       )}
     </View>
   );
@@ -146,6 +193,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     paddingTop: 60,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748b',
   },
   dateHeader: {
     fontSize: 18,
@@ -160,6 +218,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 20,
     marginBottom: 10,
+    backgroundColor: '#f8fafc',
   },
   habitItem: {
     backgroundColor: 'white',
@@ -186,17 +245,30 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 20,
   },
-  emptySection: {
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#64748b',
     textAlign: 'center',
-    color: '#22c55e',
-    fontSize: 18,
-    marginTop: 30,
-    fontWeight: '500',
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: '#94a3b8',
+    marginTop: 12,
+    textAlign: 'center',
   },
   habitInfo: {
-     flex: 1 
+    flex: 1 
   },
   thumbnail: { 
-    width: 50, height: 50, borderRadius: 8 
+    width: 50, 
+    height: 50, 
+    borderRadius: 8 
   },
 });

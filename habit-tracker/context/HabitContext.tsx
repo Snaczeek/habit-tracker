@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 
-type Habit = {
+export type Habit = {
   id: string;
   name: string;
   imageUri?: string;
@@ -24,28 +24,22 @@ type HabitContextType = {
 
 const HabitContext = createContext<HabitContextType | undefined>(undefined);
 
+const getTodayString = (): string => new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
 export function HabitProvider({ children }: { children: ReactNode }) {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Ładowanie + czyszczenie starych dat/tasków
   useEffect(() => {
-    loadAndCleanHabits();
+    loadHabits();
   }, []);
 
-  const loadAndCleanHabits = async () => {
+  const loadHabits = async () => {
     try {
       const storedHabits = await AsyncStorage.getItem('habits');
       if (storedHabits) {
-        let parsed = JSON.parse(storedHabits);
-        
-        // Usuwanie starych dat 
-        const today = new Date().toISOString().split('T')[0];
-        parsed = parsed.map((habit: Habit) => ({
-          ...habit,
-          completedDates: habit.completedDates.filter(date => date === today)
-        }));
-
+        const parsed = JSON.parse(storedHabits);
         setHabits(parsed);
       }
     } catch (error) {
@@ -57,9 +51,8 @@ export function HabitProvider({ children }: { children: ReactNode }) {
 
   const saveHabits = async (updatedHabits: Habit[]) => {
     try {
-      const habitsToSave = [...updatedHabits];
-      await AsyncStorage.setItem('habits', JSON.stringify(habitsToSave));
-      setHabits(habitsToSave);
+      await AsyncStorage.setItem('habits', JSON.stringify(updatedHabits));
+      setHabits(updatedHabits);
     } catch (error) {
       console.error('Error saving habits:', error);
     }
@@ -67,7 +60,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
 
   const addHabit = async (name: string) => {
     const newHabit: Habit = {
-      id: Date.now().toString(),
+      id: Math.random().toString(36).slice(2) + Date.now().toString(36),
       name: name.trim(),
       createdAt: new Date().toISOString(),
       completedDates: [],
@@ -76,7 +69,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
   };
 
   const toggleHabitCompletion = async (habitId: string) => {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const today = getTodayString();
 
     const updatedHabits = habits.map(habit => {
       if (habit.id === habitId) {
@@ -95,26 +88,29 @@ export function HabitProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteHabit = async (habitId: string) => {
-    // Usuwanie zdjęć 
-    const habit = habits.find(h => h.id === habitId);
-    if (habit?.imageUri) {
-      FileSystem.deleteAsync(habit.imageUri, { idempotent: true })
-        .catch(e => console.warn('Nie udało się usunąć starego zdjęcia:', e));
-    }
+    try {
+      // Usuwanie zdjęć 
+      const habit = habits.find(h => h.id === habitId);
+      if (habit?.imageUri) {
+        FileSystem.deleteAsync(habit.imageUri, { idempotent: true })
+          .catch(e => console.warn('Nie udało się usunąć starego zdjęcia:', e));
+      }
 
-    const updatedHabits = habits.filter(h => h.id !== habitId);
-    await saveHabits(updatedHabits);
+      const updatedHabits = habits.filter(h => h.id !== habitId);
+      await saveHabits(updatedHabits);
+    } catch (error) {
+      console.error("Error podczas usuwania zdjęcia", error); 
+      throw error;
+    }
   };
 
   const isHabitCompletedToday = (habitId: string): boolean => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayString();
     const habit = habits.find(h => h.id === habitId);
     return habit ? habit.completedDates.includes(today) : false;
   };
 
   const updateHabitImage = async (habitId: string, imageUri: string) => {
-    console.log(`[DEBUG] updateHabitImage called for ${habitId}`);
-
     const updatedHabits = habits.map(habit =>
       habit.id === habitId ? { ...habit, imageUri } : habit
     );
@@ -133,21 +129,21 @@ export function HabitProvider({ children }: { children: ReactNode }) {
     const today = new Date().toISOString().split('T')[0];
     const permanentUri = await persistImage(imageUri, habitId);
   
-      const updatedHabits = habits.map(habit => {
-      if (habit.id === habitId) {
-        if (habit.imageUri?.includes('habit-images/')) {
-          FileSystem.deleteAsync(habit.imageUri, { idempotent: true })
-            .catch(e => console.warn('Nie udało się usunąć starego zdjęcia:', e));
-        }
-        return {
-          ...habit,
-          imageUri: permanentUri,
-          completedDates: habit.completedDates.includes(today)
-            ? habit.completedDates
-            : [...habit.completedDates, today]
-        };
+    const updatedHabits = habits.map(habit => {
+    if (habit.id === habitId) {
+      if (habit.imageUri?.includes('habit-images/')) {
+        FileSystem.deleteAsync(habit.imageUri, { idempotent: true })
+          .catch(e => console.warn('Nie udało się usunąć starego zdjęcia:', e));
       }
-      return habit;
+      return {
+        ...habit,
+        imageUri: permanentUri,
+        completedDates: habit.completedDates.includes(today)
+          ? habit.completedDates
+          : [...habit.completedDates, today]
+      };
+    }
+    return habit;
     });
 
     await saveHabits(updatedHabits);
