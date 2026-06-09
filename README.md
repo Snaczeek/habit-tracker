@@ -48,7 +48,7 @@ Prosta aplikacja mobilna do śledzenia codziennych nawyków z możliwością dod
 ![Zakładka Nawyki](screenshots/s1.png)
 
 ### Dodawanie zdjęcia do nawyku
-![Dodawanie zdjęcia](screenshots/s3.gif)
+![Dodawanie zdjęcia](screenshots/s3.png)
 
 ## 🏗 Budowanie aplikacji (EAS Build)
 
