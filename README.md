@@ -60,7 +60,7 @@ Budowanie wersji preview APK na Android odbywa się za pomocą EAS Build.
 
 **Komenda budowania:**
 ```bash
-eas build --platform android --profile preview
+npx eas-cli build --platform android --profile preview
 ```
 
 Po zakończeniu buildu na serwerach Expo otrzymasz link do pobrania pliku `.apk`.
