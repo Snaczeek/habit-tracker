@@ -1,36 +1,40 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
-import { useHabits } from '../../context/HabitContext';
-import { Ionicons } from '@expo/vector-icons';
-import type { Habit } from '../../context/HabitContext';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import {
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import type { Habit } from "../../context/HabitContext";
+import { useHabits } from "../../context/HabitContext";
 
 export default function HabitsScreen() {
   const { habits, loading, deleteHabit, updateHabit } = useHabits();
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
+  const [editName, setEditName] = useState("");
 
   const handleDelete = (habitId: string, habitName: string) => {
-    Alert.alert(
-        'Usunąć nawyk?',
-        `Czy na pewno chcesz usunąć "${habitName}"?`,
-        [
-            { text: 'Anuluj', style: 'cancel' },
-            {
-                text: 'Usuń',
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    await deleteHabit(habitId);
-                  } catch (error) {
-                    Alert.alert('Błąd', 'Nie udało się usunąć nawyku');
-                  }
-                }
-            }
-        ]
-    )
-  }
+    Alert.alert("Usunąć nawyk?", `Czy na pewno chcesz usunąć "${habitName}"?`, [
+      { text: "Anuluj", style: "cancel" },
+      {
+        text: "Usuń",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteHabit(habitId);
+          } catch (error) {
+            Alert.alert("Błąd", "Nie udało się usunąć nawyku");
+          }
+        },
+      },
+    ]);
+  };
 
   const startEditing = (habit: Habit) => {
     setEditingId(habit.id);
@@ -43,27 +47,27 @@ export default function HabitsScreen() {
     const trimmedName = editName.trim();
 
     if (trimmedName.length < 2) {
-        Alert.alert('Błąd', 'Nazwa nawyku musi mieć co najmniej 2 znaki');
-        return; 
+      Alert.alert("Błąd", "Nazwa nawyku musi mieć co najmniej 2 znaki");
+      return;
     }
 
     await updateHabit(editingId, trimmedName);
     setEditingId(null);
-    setEditName('');
+    setEditName("");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditName('');
+    setEditName("");
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Moje nawyki</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.addButton}
-          onPress={() => router.push('/add-habit')}
+          onPress={() => router.push("/add-habit")}
         >
           <Ionicons name="add" size={28} color="white" />
         </TouchableOpacity>
@@ -93,7 +97,10 @@ export default function HabitsScreen() {
                   <TouchableOpacity onPress={saveEdit}>
                     <Ionicons name="checkmark" size={24} color="#22c55e" />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={cancelEdit} style={styles.cancelButton}>
+                  <TouchableOpacity
+                    onPress={cancelEdit}
+                    style={styles.cancelButton}
+                  >
                     <Ionicons name="close" size={24} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
@@ -101,20 +108,24 @@ export default function HabitsScreen() {
                 // Normalny widok
                 <>
                   <Text style={styles.habitName}>{item.name}</Text>
-                  
+
                   <View style={styles.actions}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.actionButton}
                       onPress={() => startEditing(item)}
                     >
                       <Ionicons name="pencil" size={22} color="#64748b" />
                     </TouchableOpacity>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                       style={styles.actionButton}
                       onPress={() => handleDelete(item.id, item.name)}
                     >
-                      <Ionicons name="trash-outline" size={22} color="#ef4444" />
+                      <Ionicons
+                        name="trash-outline"
+                        size={22}
+                        color="#ef4444"
+                      />
                     </TouchableOpacity>
                   </View>
                 </>
@@ -130,45 +141,45 @@ export default function HabitsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
     paddingTop: 60,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#e2e8f0",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1e2937',
+    fontWeight: "bold",
+    color: "#1e2937",
   },
   addButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: "#3b82f6",
     width: 50,
     height: 50,
     borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   cancelButton: {
     marginLeft: 12,
   },
   habitItem: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     marginHorizontal: 12,
     marginVertical: 6,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    borderColor: "#e2e8f0",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   habitName: {
     fontSize: 18,
@@ -176,29 +187,32 @@ const styles = StyleSheet.create({
   },
   empty: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 40,
   },
   emptyText: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#64748b',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#64748b",
+    textAlign: "center",
   },
-  actions: { 
-    flexDirection: 'row' 
+  actions: {
+    flexDirection: "row",
   },
-  actionButton: { 
-    padding: 8, marginLeft: 4 
+  actionButton: {
+    padding: 8,
+    marginLeft: 4,
   },
-  editContainer: { 
-    flexDirection: 'row', alignItems: 'center', flex: 1 
+  editContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
   editInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#3b82f6',
+    borderColor: "#3b82f6",
     borderRadius: 8,
     padding: 8,
     marginRight: 8,
